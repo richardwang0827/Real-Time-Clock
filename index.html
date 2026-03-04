@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="AuroraClock — a polished real-time clock with multi-language support, localized theme names, 12/24-hour toggle (left=24h, right=12h), and timezone/DST change detection." />
+  <meta name="theme-color" content="#2563eb" />
+  <title>AuroraClock</title>
+  <style>
+    :root{--fg:#0f172a;--muted:#475569;--accent:#2563eb;--bg-a:#f6f7fb;--bg-b:#ffffff;--bg-c:#eef2ff;--panel:rgba(255,255,255,.72);--panel-strong:rgba(255,255,255,.88);--panel-border:rgba(15,23,42,.10);--menu-bg:#ffffff;--menu-fg:#0f172a;--menu-border:rgba(15,23,42,.18);--shadow:0 22px 70px rgba(2,6,23,.12);--shadow2:0 14px 40px rgba(2,6,23,.10);--ring:0 0 0 3px rgba(37,99,235,.25);--top-gap:calc(14px + env(safe-area-inset-top));--bar-width:min(1100px, calc(100vw - 28px));--topbar-h:0px;color-scheme:light}
+    html[data-scheme="dark"]{color-scheme:dark}
+    html[data-scheme="light"]{color-scheme:light}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:var(--fg);min-height:100svh;overflow-x:hidden;background:radial-gradient(1200px 800px at 18% 16%,color-mix(in oklab,var(--accent),transparent 80%),transparent 58%),radial-gradient(900px 600px at 84% 82%,color-mix(in oklab,var(--accent),transparent 88%),transparent 62%),linear-gradient(135deg,var(--bg-a),var(--bg-b),var(--bg-c));transition:background 220ms ease,color 220ms ease}
+    @supports not (background: color-mix(in oklab, white, black)){body{background:linear-gradient(135deg,var(--bg-a),var(--bg-b),var(--bg-c))}}
+    .topbar{position:fixed;top:var(--top-gap);left:50%;transform:translateX(-50%);width:var(--bar-width);z-index:10;background:var(--panel-strong);border:1px solid var(--panel-border);border-radius:16px;box-shadow:var(--shadow2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .stage{min-height:100svh;display:grid;place-items:center;padding-top:calc(var(--top-gap) + var(--topbar-h) + 18px);padding-bottom:calc(18px + env(safe-area-inset-bottom));padding-left:14px;padding-right:14px}
+    .brand{display:flex;align-items:center;gap:10px;min-width:260px}
+    .dot{width:10px;height:10px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 6px color-mix(in oklab,var(--accent),transparent 80%);flex:0 0 auto}
+    .title{font-weight:750;letter-spacing:.01em;font-size:13px;color:var(--muted);user-select:none;white-space:nowrap}
+    .sub{font-size:12px;color:var(--muted);opacity:.92;user-select:none;white-space:nowrap}
+    .controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px}
+    button,.toggle,select{font:inherit;color:var(--fg);background:transparent;border:1px solid var(--panel-border);border-radius:12px;padding:10px 12px;cursor:pointer;transition:transform 60ms ease,background 160ms ease,border-color 160ms ease;user-select:none;line-height:1}
+    button:hover,.toggle:hover,select:hover{background:color-mix(in oklab,var(--fg),transparent 94%)}
+    button:active,.toggle:active{transform:scale(.98)}
+    button:focus-visible,.toggle:focus-within,select:focus-visible{outline:none;box-shadow:var(--ring)}
+    .btn-accent{border-color:color-mix(in oklab,var(--accent),transparent 55%);background:color-mix(in oklab,var(--accent),transparent 90%)}
+    .btn-accent:hover{background:color-mix(in oklab,var(--accent),transparent 84%)}
+    .selectWrap{position:relative;display:inline-block}
+    .selectWrap::after{content:"";position:absolute;right:14px;top:50%;transform:translateY(-30%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid var(--menu-fg);pointer-events:none;opacity:.9}
+    select{padding-right:44px;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-color:var(--menu-bg);color:var(--menu-fg);border-color:var(--menu-border)}
+    select option{background-color:var(--menu-bg);color:var(--menu-fg)}
+    select option:checked{background-color:color-mix(in oklab,var(--accent),var(--menu-bg) 70%);color:var(--menu-fg)}
+    .toggle{display:flex;align-items:center;gap:10px;padding:10px 12px}
+    .switch{width:44px;height:24px;border-radius:999px;background:color-mix(in oklab,var(--muted),transparent 70%);position:relative;flex:0 0 auto;transition:background 160ms ease}
+    .switch::after{content:"";position:absolute;width:18px;height:18px;top:3px;left:3px;background:color-mix(in oklab,white,var(--bg-b) 20%);border-radius:999px;box-shadow:0 1px 2px rgba(0,0,0,.25);transform:translateX(0);transition:transform 160ms ease}
+    .toggle input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+    .toggle[data-on="true"] .switch{background:color-mix(in oklab,var(--accent),var(--panel) 70%)}
+    .toggle[data-on="true"] .switch::after{transform:translateX(20px)}
+    .clock{width:min(1040px,94vw);padding:clamp(34px,5.8vw,62px);border-radius:32px;background:var(--panel);border:1px solid var(--panel-border);box-shadow:var(--shadow);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);text-align:center}
+    .time{display:flex;justify-content:center;align-items:baseline;gap:clamp(10px,2vw,18px);flex-wrap:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-variant-numeric:tabular-nums;font-weight:950;letter-spacing:.06em;line-height:1.01;margin:4px 0 0;white-space:nowrap}
+    #timeDigits{font-size:clamp(4.6rem,18vw,9.2rem)}
+    .ampm{font-size:clamp(1.6rem,4.8vw,3.2rem);letter-spacing:.04em;opacity:.95}
+    .date{margin-top:18px;font-size:clamp(1.15rem,3.4vw,1.5rem);color:var(--muted)}
+    .meta{margin-top:16px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px;user-select:none}
+    .pill{border:1px solid var(--panel-border);background:color-mix(in oklab,var(--panel),var(--fg) 3%);border-radius:999px;padding:7px 10px;display:flex;align-items:center;gap:6px}
+    .toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--panel-strong);border:1px solid var(--panel-border);box-shadow:var(--shadow2);border-radius:999px;padding:10px 14px;font-size:13px;color:var(--fg);opacity:0;pointer-events:none;transition:opacity 180ms ease,transform 180ms ease}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+    @media (max-width:760px){.brand{display:none}.topbar{justify-content:center}}
+    @media (max-width:440px){.clock{width:94vw}.time{letter-spacing:.03em}.selectWrap::after{right:12px;border-left-width:5px;border-right-width:5px;border-top-width:6px}}
+    @media (prefers-reduced-motion: reduce){body,.clock,.topbar,button,.toggle,select,.switch,.switch::after,.toast{transition:none!important}}
+  </style>
+</head>
+<body>
+  <div class="topbar" id="topbar" role="navigation" aria-label="Clock controls">
+    <div class="brand" aria-hidden="true">
+      <span class="dot"></span>
+      <div>
+        <div class="title" id="brandTitle">AuroraClock</div>
+        <div class="sub" id="tzLabel">Detecting timezone…</div>
+      </div>
+    </div>
+    <div class="controls">
+      <label for="langSelect" class="title" id="langLabel" style="margin-right:-4px;">Language</label>
+      <span class="selectWrap">
+        <select id="langSelect" aria-label="Select language"></select>
+      </span>
+      <label for="themeSelect" class="title" id="themeLabel" style="margin-right:-4px;">Theme</label>
+      <span class="selectWrap">
+        <select id="themeSelect" aria-label="Select theme"></select>
+      </span>
+      <div class="toggle" id="fmtToggle" role="switch" aria-checked="false" tabindex="0" data-on="false">
+        <span class="switch" aria-hidden="true"></span>
+        <span id="fmtLabel"><strong>24‑hour</strong></span>
+        <input id="fmtInput" type="checkbox" aria-label="Toggle 12/24-hour format" />
+      </div>
+      <button id="copyBtn" type="button" title="Copy time to clipboard" class="btn-accent">📋 Copy</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <main class="clock" role="group" aria-label="Clock widget">
+      <div class="time" id="time" aria-live="polite" aria-atomic="true">
+        <span id="timeDigits">--:--:--</span>
+        <span id="timeAmPm" class="ampm" aria-hidden="true"></span>
+      </div>
+      <div class="date" id="date">Loading…</div>
+      <div class="meta" aria-label="Timezone info">
+        <div class="pill" title="IANA timezone name"><span>🗺️</span><span id="tzName">—</span></div>
+        <div class="pill" title="UTC offset"><span>🕓</span><span id="utcOffset">UTC—</span></div>
+        <div class="pill" title="Theme mode"><span>🎨</span><span id="themeMode">Auto</span></div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">Updated</div>
+
+  <script>
+  (function(){
+    "use strict";
+    function $(id){ return document.getElementById(id); }
+    var timeDigitsEl = $("timeDigits");
+    var timeAmPmEl = $("timeAmPm");
+    var dateEl = $("date");
+    var tzLabel = $("tzLabel");
+    var tzNameEl = $("tzName");
+    var utcOffsetEl = $("utcOffset");
+    var themeModeEl = $("themeMode");
+    var toast = $("toast");
+    var themeSelect = $("themeSelect");
+    var fmtToggle = $("fmtToggle");
+    var fmtInput = $("fmtInput");
+    var copyBtn = $("copyBtn");
+    var topbar = $("topbar");
+    var brandTitle = $("brandTitle");
+    var fmtLabel = $("fmtLabel");
+    var themeLabel = $("themeLabel");
+    var langLabel = $("langLabel");
+    var langSelect = $("langSelect");
+    var root = document.documentElement;
+
+    var storage = {
+      get: function(key, fallback){ try{ var v = localStorage.getItem(key); return v===null?fallback:v; }catch(e){ return fallback; } },
+      set: function(key, value){ try{ localStorage.setItem(key, value); }catch(e){} }
+    };
+
+    var prefersDark = null; try { if (window.matchMedia) prefersDark = window.matchMedia("(prefers-color-scheme: dark)"); } catch(e){ prefersDark = null; }
+
+    function measureTopbar(){ try { var h = topbar.getBoundingClientRect().height; root.style.setProperty('--topbar-h', h + 'px'); } catch(e){} }
+
+    // Theme data
+    var THEMES = [
+      { id:"auto", scheme:"auto" },
+      { id:"snow", scheme:"light", bg:["#f6f7fb","#ffffff","#eef2ff"], panel:["rgba(255,255,255,.72)","rgba(255,255,255,.88)"], border:"rgba(15,23,42,.10)", fg:"#0f172a", muted:"#475569", accent:"#2563eb", ring:"rgba(37,99,235,.25)", shadow:"0 22px 70px rgba(2,6,23,.12)", shadow2:"0 14px 40px rgba(2,6,23,.10)", themeColor:"#2563eb", menuBg:"#ffffff", menuFg:"#0f172a", menuBorder:"rgba(15,23,42,.18)" },
+      { id:"midnight", scheme:"dark", bg:["#070b14","#0b1220","#111827"], panel:["rgba(17,24,39,.62)","rgba(17,24,39,.78)"], border:"rgba(148,163,184,.18)", fg:"#e5e7eb", muted:"#94a3b8", accent:"#60a5fa", ring:"rgba(96,165,250,.25)", shadow:"0 26px 90px rgba(0,0,0,.55)", shadow2:"0 16px 56px rgba(0,0,0,.45)", themeColor:"#60a5fa", menuBg:"#0b1220", menuFg:"#e5e7eb", menuBorder:"rgba(148,163,184,.28)" },
+      { id:"aurora", scheme:"dark", bg:["#06141f","#0b2d3a","#1b0b3d"], panel:["rgba(10,23,35,.62)","rgba(10,23,35,.78)"], border:"rgba(167,243,208,.18)", fg:"#e6fffb", muted:"rgba(230,255,251,.72)", accent:"#34d399", ring:"rgba(52,211,153,.25)", shadow:"0 26px 90px rgba(0,0,0,.55)", shadow2:"0 16px 56px rgba(0,0,0,.45)", themeColor:"#34d399", menuBg:"#06141f", menuFg:"#e6fffb", menuBorder:"rgba(167,243,208,.28)" },
+      { id:"sunset", scheme:"light", bg:["#fff1f2","#ffedd5","#fde68a"], panel:["rgba(255,255,255,.70)","rgba(255,255,255,.86)"], border:"rgba(124,45,18,.14)", fg:"#4c1d95", muted:"#7c2d12", accent:"#f97316", ring:"rgba(249,115,22,.25)", shadow:"0 22px 70px rgba(124,45,18,.18)", shadow2:"0 14px 40px rgba(124,45,18,.14)", themeColor:"#f97316", menuBg:"#ffffff", menuFg:"#4c1d95", menuBorder:"rgba(124,45,18,.20)" },
+      { id:"ocean", scheme:"light", bg:["#e0f2fe","#cffafe","#dbeafe"], panel:["rgba(255,255,255,.70)","rgba(255,255,255,.86)"], border:"rgba(2,132,199,.16)", fg:"#0c4a6e", muted:"#0369a1", accent:"#0ea5e9", ring:"rgba(14,165,233,.25)", shadow:"0 22px 70px rgba(2,132,199,.18)", shadow2:"0 14px 40px rgba(2,132,199,.14)", themeColor:"#0ea5e9", menuBg:"#ffffff", menuFg:"#0c4a6e", menuBorder:"rgba(2,132,199,.22)" },
+      { id:"forest", scheme:"dark", bg:["#071a12","#0b2b1c","#102a43"], panel:["rgba(7,26,18,.62)","rgba(7,26,18,.78)"], border:"rgba(74,222,128,.18)", fg:"#ecfdf5", muted:"rgba(236,253,245,.72)", accent:"#22c55e", ring:"rgba(34,197,94,.25)", shadow:"0 26px 90px rgba(0,0,0,.55)", shadow2:"0 16px 56px rgba(0,0,0,.45)", themeColor:"#22c55e", menuBg:"#071a12", menuFg:"#ecfdf5", menuBorder:"rgba(74,222,128,.28)" },
+      { id:"lavender", scheme:"light", bg:["#f5f3ff","#ede9fe","#ffe4e6"], panel:["rgba(255,255,255,.72)","rgba(255,255,255,.88)"], border:"rgba(91,33,182,.14)", fg:"#2e1065", muted:"#6d28d9", accent:"#a78bfa", ring:"rgba(167,139,250,.30)", shadow:"0 22px 70px rgba(91,33,182,.16)", shadow2:"0 14px 40px rgba(91,33,182,.12)", themeColor:"#a78bfa", menuBg:"#ffffff", menuFg:"#2e1065", menuBorder:"rgba(91,33,182,.22)" },
+      { id:"candy", scheme:"light", bg:["#fff1f2","#e0e7ff","#fdf2f8"], panel:["rgba(255,255,255,.70)","rgba(255,255,255,.88)"], border:"rgba(219,39,119,.16)", fg:"#4a044e", muted:"#9d174d", accent:"#db2777", ring:"rgba(219,39,119,.26)", shadow:"0 22px 70px rgba(219,39,119,.16)", shadow2:"0 14px 40px rgba(219,39,119,.12)", themeColor:"#db2777", menuBg:"#ffffff", menuFg:"#4a044e", menuBorder:"rgba(219,39,119,.22)" },
+      { id:"ember", scheme:"dark", bg:["#120b0a","#2a1308","#3b1b0a"], panel:["rgba(18,11,10,.62)","rgba(18,11,10,.78)"], border:"rgba(251,146,60,.20)", fg:"#fff7ed", muted:"rgba(255,247,237,.75)", accent:"#fb923c", ring:"rgba(251,146,60,.25)", shadow:"0 26px 90px rgba(0,0,0,.60)", shadow2:"0 16px 56px rgba(0,0,0,.45)", themeColor:"#fb923c", menuBg:"#120b0a", menuFg:"#fff7ed", menuBorder:"rgba(251,146,60,.30)" },
+      { id:"ice", scheme:"dark", bg:["#071521","#0a2540","#0b3a3d"], panel:["rgba(7,21,33,.62)","rgba(7,21,33,.78)"], border:"rgba(125,211,252,.20)", fg:"#e0f2fe", muted:"rgba(224,242,254,.72)", accent:"#38bdf8", ring:"rgba(56,189,248,.25)", shadow:"0 26px 90px rgba(0,0,0,.60)", shadow2:"0 16px 56px rgba(0,0,0,.45)", themeColor:"#38bdf8", menuBg:"#071521", menuFg:"#e0f2fe", menuBorder:"rgba(125,211,252,.30)" },
+      { id:"peach", scheme:"light", bg:["#fff7ed","#ffedd5","#ffe4e6"], panel:["rgba(255,255,255,.72)","rgba(255,255,255,.88)"], border:"rgba(234,88,12,.14)", fg:"#7c2d12", muted:"#9a3412", accent:"#ea580c", ring:"rgba(234,88,12,.25)", shadow:"0 22px 70px rgba(234,88,12,.16)", shadow2:"0 14px 40px rgba(234,88,12,.12)", themeColor:"#ea580c", menuBg:"#ffffff", menuFg:"#7c2d12", menuBorder:"rgba(234,88,12,.22)" },
+      { id:"mono", scheme:"dark", bg:["#0b0f17","#111827","#0b0f17"], panel:["rgba(17,24,39,.62)","rgba(17,24,39,.78)"], border:"rgba(148,163,184,.20)", fg:"#f8fafc", muted:"#cbd5e1", accent:"#e2e8f0", ring:"rgba(226,232,240,.20)", shadow:"0 26px 90px rgba(0,0,0,.60)", shadow2:"0 16px 56px rgba(0,0,0,.45)", themeColor:"#e2e8f0", menuBg:"#0b0f17", menuFg:"#f8fafc", menuBorder:"rgba(148,163,184,.30)" }
+    ];
+
+    function themeById(id){ for (var i=0;i<THEMES.length;i++) if (THEMES[i].id===id) return THEMES[i]; return THEMES[0]; }
+    function systemDefaultThemeId(){ return (prefersDark && prefersDark.matches) ? "midnight" : "snow"; }
+    function setMetaThemeColor(color){ var meta = document.querySelector('meta[name="theme-color"]'); if (meta && color) meta.setAttribute("content", color); }
+
+    // ---- i18n ----
+    var LANGS = [
+      { id:"auto", name:"Auto (System)", dir:"auto" },
+      { id:"en-US", name:"English (US)", dir:"ltr" },
+      { id:"es-ES", name:"Español (ES)", dir:"ltr" },
+      { id:"fr-FR", name:"Français (FR)", dir:"ltr" },
+      { id:"de-DE", name:"Deutsch (DE)", dir:"ltr" },
+      { id:"zh-CN", name:"中文（简体）", dir:"ltr" },
+      { id:"zh-TW", name:"中文（繁體）", dir:"ltr" },
+      { id:"ja-JP", name:"日本語", dir:"ltr" },
+      { id:"ko-KR", name:"한국어", dir:"ltr" },
+      { id:"pt-BR", name:"Português (BR)", dir:"ltr" },
+      { id:"ru-RU", name:"Русский", dir:"ltr" },
+      { id:"ar",    name:"العربية", dir:"rtl" },
+      { id:"he-IL", name:"עברית", dir:"rtl" },
+      { id:"hi-IN", name:"हिन्दी", dir:"ltr" }
+    ];
+
+    var I18N = {
+      "en-US": {title:"AuroraClock",detecting:"Detecting timezone…",language:"Language",theme:"Theme",hour12:"12‑hour",hour24:"24‑hour",copy:"Copy",toast_theme:"Theme updated",toast_fmt:"Format updated",toast_copy_ok:"Copied time",toast_copy_fail:"Copy failed",toast_tz:"Timezone updated",mode_auto:"Auto",mode_manual:"Manual",aria_toggle_fmt:"Toggle 12/24‑hour format",
+        themes:{auto:"Auto (System)",snow:"Snow (Light)",midnight:"Midnight (Dark)",aurora:"Aurora",sunset:"Sunset",ocean:"Ocean",forest:"Forest",lavender:"Lavender",candy:"Candy",ember:"Ember",ice:"Ice",peach:"Peach",mono:"Mono"}}
+      ,"es-ES": {title:"Reloj Aurora",detecting:"Detectando zona horaria…",language:"Idioma",theme:"Tema",hour12:"Formato 12 horas",hour24:"Formato 24 horas",copy:"Copiar",toast_theme:"Tema actualizado",toast_fmt:"Formato actualizado",toast_copy_ok:"Hora copiada",toast_copy_fail:"Error al copiar",toast_tz:"Zona horaria actualizada",mode_auto:"Automático",mode_manual:"Manual",aria_toggle_fmt:"Alternar formato de 12/24 horas",
+        themes:{auto:"Automático (sistema)",snow:"Nieve (claro)",midnight:"Medianoche (oscuro)",aurora:"Aurora",sunset:"Atardecer",ocean:"Océano",forest:"Bosque",lavender:"Lavanda",candy:"Caramelo",ember:"Brasa",ice:"Hielo",peach:"Durazno",mono:"Monocromo"}}
+      ,"fr-FR": {title:"Horloge Aurore",detecting:"Détection du fuseau horaire…",language:"Langue",theme:"Thème",hour12:"Format 12 h",hour24:"Format 24 h",copy:"Copier",toast_theme:"Thème mis à jour",toast_fmt:"Format mis à jour",toast_copy_ok:"Heure copiée",toast_copy_fail:"Échec de la copie",toast_tz:"Fuseau horaire mis à jour",mode_auto:"Auto",mode_manual:"Manuel",aria_toggle_fmt:"Basculer format 12/24 h",
+        themes:{auto:"Auto (système)",snow:"Neige (clair)",midnight:"Minuit (sombre)",aurora:"Aurore",sunset:"Coucher de soleil",ocean:"Océan",forest:"Forêt",lavender:"Lavande",candy:"Bonbon",ember:"Braise",ice:"Glace",peach:"Pêche",mono:"Mono"}}
+      ,"de-DE": {title:"Aurora-Uhr",detecting:"Zeitzone wird ermittelt…",language:"Sprache",theme:"Theme",hour12:"12‑Stunden",hour24:"24‑Stunden",copy:"Kopieren",toast_theme:"Theme aktualisiert",toast_fmt:"Format aktualisiert",toast_copy_ok:"Uhrzeit kopiert",toast_copy_fail:"Kopieren fehlgeschlagen",toast_tz:"Zeitzone aktualisiert",mode_auto:"Auto",mode_manual:"Manuell",aria_toggle_fmt:"12/24‑Stunden‑Format umschalten",
+        themes:{auto:"Auto (System)",snow:"Schnee (hell)",midnight:"Mitternacht (dunkel)",aurora:"Aurora",sunset:"Sonnenuntergang",ocean:"Ozean",forest:"Wald",lavender:"Lavendel",candy:"Süßigkeiten",ember:"Glut",ice:"Eis",peach:"Pfirsich",mono:"Mono"}}
+      ,"zh-CN": {title:"极光时钟",detecting:"正在检测时区…",language:"语言",theme:"主题",hour12:"12 小时制",hour24:"24 小时制",copy:"复制",toast_theme:"主题已更新",toast_fmt:"格式已更新",toast_copy_ok:"时间已复制",toast_copy_fail:"复制失败",toast_tz:"时区已更新",mode_auto:"自动",mode_manual:"手动",aria_toggle_fmt:"切换 12/24 小时制",
+        themes:{auto:"自动（系统）",snow:"雪（浅色）",midnight:"午夜（深色）",aurora:"极光",sunset:"日落",ocean:"海洋",forest:"森林",lavender:"薰衣草",candy:"糖果",ember:"余烬",ice:"冰",peach:"桃子",mono:"石墨"}}
+      ,"zh-TW": {title:"極光時鐘",detecting:"正在偵測時區…",language:"語言",theme:"主題",hour12:"12 小時制",hour24:"24 小時制",copy:"複製",toast_theme:"主題已更新",toast_fmt:"格式已更新",toast_copy_ok:"時間已複製",toast_copy_fail:"複製失敗",toast_tz:"時區已更新",mode_auto:"自動",mode_manual:"手動",aria_toggle_fmt:"切換 12/24 小時制",
+        themes:{auto:"自動（系統）",snow:"雪（淺色）",midnight:"午夜（深色）",aurora:"極光",sunset:"日落",ocean:"海洋",forest:"森林",lavender:"薰衣草",candy:"糖果",ember:"餘燼",ice:"冰",peach:"桃子",mono:"石墨"}}
+      ,"ja-JP": {title:"オーロラクロック",detecting:"タイムゾーンを検出中…",language:"言語",theme:"テーマ",hour12:"12 時間制",hour24:"24 時間制",copy:"コピー",toast_theme:"テーマを更新しました",toast_fmt:"形式を更新しました",toast_copy_ok:"時刻をコピーしました",toast_copy_fail:"コピーに失敗しました",toast_tz:"タイムゾーンを更新しました",mode_auto:"自動",mode_manual:"手動",aria_toggle_fmt:"12/24 時間制に切り替え",
+        themes:{auto:"自動（システム）",snow:"スノー（ライト）",midnight:"ミッドナイト（ダーク）",aurora:"オーロラ",sunset:"サンセット",ocean:"オーシャン",forest:"フォレスト",lavender:"ラベンダー",candy:"キャンディ",ember:"エンバー",ice:"アイス",peach:"ピーチ",mono:"モノ"}}
+      ,"ko-KR": {title:"오로라 시계",detecting:"시간대를 감지하는 중…",language:"언어",theme:"테마",hour12:"12시간제",hour24:"24시간제",copy:"복사",toast_theme:"테마가 업데이트되었습니다",toast_fmt:"형식이 업데이트되었습니다",toast_copy_ok:"시간이 복사되었습니다",toast_copy_fail:"복사 실패",toast_tz:"시간대가 업데이트되었습니다",mode_auto:"자동",mode_manual:"수동",aria_toggle_fmt:"12/24시간제 전환",
+        themes:{auto:"자동(시스템)",snow:"스노우(라이트)",midnight:"미드나이트(다크)",aurora:"오로라",sunset:"선셋",ocean:"오션",forest:"포레스트",lavender:"라벤더",candy:"캔디",ember:"엠버",ice:"아이스",peach:"피치",mono:"모노"}}
+      ,"pt-BR": {title:"Relógio Aurora",detecting:"Detectando fuso horário…",language:"Idioma",theme:"Tema",hour12:"Formato 12 horas",hour24:"Formato 24 horas",copy:"Copiar",toast_theme:"Tema atualizado",toast_fmt:"Formato atualizado",toast_copy_ok:"Hora copiada",toast_copy_fail:"Falha ao copiar",toast_tz:"Fuso horário atualizado",mode_auto:"Automático",mode_manual:"Manual",aria_toggle_fmt:"Alternar formato de 12/24 horas",
+        themes:{auto:"Automático (sistema)",snow:"Neve (claro)",midnight:"Meia-noite (escuro)",aurora:"Aurora",sunset:"Pôr do sol",ocean:"Oceano",forest:"Floresta",lavender:"Lavanda",candy:"Doce",ember:"Brasa",ice:"Gelo",peach:"Pêssego",mono:"Mono"}}
+      ,"ru-RU": {title:"Часы Аврора",detecting:"Определение часового пояса…",language:"Язык",theme:"Тема",hour12:"12‑часовой формат",hour24:"24‑часовой формат",copy:"Копировать",toast_theme:"Тема обновлена",toast_fmt:"Формат обновлён",toast_copy_ok:"Время скопировано",toast_copy_fail:"Не удалось скопировать",toast_tz:"Часовой пояс обновлён",mode_auto:"Авто",mode_manual:"Вручную",aria_toggle_fmt:"Переключить 12/24‑часовой формат",
+        themes:{auto:"Авто (система)",snow:"Снег (светлая)",midnight:"Полночь (тёмная)",aurora:"Аврора",sunset:"Закат",ocean:"Океан",forest:"Лес",lavender:"Лаванда",candy:"Конфета",ember:"Угольки",ice:"Лёд",peach:"Персик",mono:"Моно"}}
+      ,"ar": {title:"ساعة الشفق القطبي",detecting:"جارٍ اكتشاف المنطقة الزمنية…",language:"اللغة",theme:"السمة",hour12:"نظام 12 ساعة",hour24:"نظام 24 ساعة",copy:"نسخ",toast_theme:"تم تحديث السمة",toast_fmt:"تم تحديث التنسيق",toast_copy_ok:"تم نسخ الوقت",toast_copy_fail:"فشل النسخ",toast_tz:"تم تحديث المنطقة الزمنية",mode_auto:"تلقائي",mode_manual:"يدوي",aria_toggle_fmt:"تبديل نظام 12/24 ساعة",
+        themes:{auto:"تلقائي (النظام)",snow:"ثلج (فاتح)",midnight:"منتصف الليل (داكن)",aurora:"شفق قطبي",sunset:"غروب الشمس",ocean:"المحيط",forest:"الغابة",lavender:"لافندر",candy:"حلوى",ember:"جمرة",ice:"ثلج",peach:"خوخ",mono:"أحادي"}}
+      ,"he-IL": {title:"שעון אורורה",detecting:"מאתר אזור זמן…",language:"שפה",theme:"ערכת עיצוב",hour12:"שיטת 12 שעות",hour24:"שיטת 24 שעות",copy:"העתקה",toast_theme:"ערכת העיצוב עודכנה",toast_fmt:"הפורמט עודכן",toast_copy_ok:"השעה הועתקה",toast_copy_fail:"ההעתקה נכשלה",toast_tz:"אזור הזמן עודכן",mode_auto:"אוטומטי",mode_manual:"ידני",aria_toggle_fmt:"החלפת שיטת 12/24 שעות",
+        themes:{auto:"אוטומטי (מערכת)",snow:"שלג (בהיר)",midnight:"חצות (כהה)",aurora:"זוהר צפוני",sunset:"שקיעה",ocean:"אוקיינוס",forest:"יער",lavender:"לבנדר",candy:"ממתק",ember:"גחלת",ice:"קרח",peach:"אפרסק",mono:"מונו"}}
+      ,"hi-IN": {title:"ऑरोरा घड़ी",detecting:"समय क्षेत्र का पता लगाया जा रहा है…",language:"भाषा",theme:"थीम",hour12:"12‑घंटे प्रारूप",hour24:"24‑घंटे प्रारूप",copy:"कॉपी",toast_theme:"थीम अपडेट हुई",toast_fmt:"प्रारूप अपडेट हुआ",toast_copy_ok:"समय कॉपी हुआ",toast_copy_fail:"कॉपी विफल",toast_tz:"समय क्षेत्र अपडेट हुआ",mode_auto:"स्वतः",mode_manual:"मैन्युअल",aria_toggle_fmt:"12/24‑घंटे प्रारूप टॉगल करें",
+        themes:{auto:"स्वतः (सिस्टम)",snow:"हिम (हल्का)",midnight:"मध्यरात्रि (गहरा)",aurora:"औरोरा",sunset:"सूर्यास्त",ocean:"महासागर",forest:"वन",lavender:"लैवेंडर",candy:"कैंडी",ember:"अंगारा",ice:"बर्फ",peach:"आड़ू",mono:"मोनो"}}
+    };
+
+    function getSavedLocale(){ var v = storage.get("locale","auto"); return v || "auto"; }
+    function effectiveLocale(){ var saved = getSavedLocale(); return (saved==="auto")?undefined:saved; }
+    function isRTL(loc){ for (var i=0;i<LANGS.length;i++){ if (LANGS[i].id===loc) return LANGS[i].dir==="rtl"; } return false; }
+    function activePack(){ var loc = effectiveLocale() || navigator.language || "en-US"; return I18N[loc] || I18N[(loc||"").split("-")[0]] || I18N["en-US"]; }
+    function tStr(key){ var p = activePack(); return p[key] || I18N["en-US"][key] || key; }
+    function tThemeName(id){ var p = activePack(); var dict = p.themes || (I18N["en-US"].themes); return (dict && dict[id]) || (I18N["en-US"].themes[id]||id); }
+
+    function applyLanguageAttrs(){ var saved = getSavedLocale(); var loc = (saved === "auto") ? (navigator.language || "en-US") : saved; document.documentElement.lang = loc; document.documentElement.dir = isRTL(saved) ? "rtl" : (saved==="auto"?"auto":"ltr"); }
+
+    function setMetaLabels(){ brandTitle.textContent = tStr("title"); themeLabel.textContent = tStr("theme"); langLabel.textContent = tStr("language"); updateFmtLabel(); copyBtn.textContent = "📋 " + tStr("copy"); fmtInput.setAttribute("aria-label", tStr("aria_toggle_fmt")); }
+
+    function populateLanguages(){ langSelect.innerHTML = ""; for (var j=0;j<LANGS.length;j++){ var lo=document.createElement("option"); lo.value=LANGS[j].id; lo.textContent=LANGS[j].name; langSelect.appendChild(lo);} }
+
+    function populateThemes(){
+      var selected = themeSelect.value || storage.get("themeId","auto");
+      themeSelect.innerHTML = "";
+      var autoOpt = document.createElement("option"); autoOpt.value = "auto"; autoOpt.textContent = tThemeName("auto"); themeSelect.appendChild(autoOpt);
+      for (var i=1;i<THEMES.length;i++){
+        var t = THEMES[i]; var opt=document.createElement("option"); opt.value=t.id; opt.textContent = tThemeName(t.id); themeSelect.appendChild(opt);
+      }
+      themeSelect.value = selected;
+    }
+
+    function applyTheme(themeId){
+      var mode = themeId;
+      if (themeId === "auto") { mode = "auto"; themeId = systemDefaultThemeId(); }
+      var t = themeById(themeId);
+      root.style.setProperty("--fg", t.fg); root.style.setProperty("--muted", t.muted); root.style.setProperty("--accent", t.accent);
+      root.style.setProperty("--bg-a", t.bg[0]); root.style.setProperty("--bg-b", t.bg[1]); root.style.setProperty("--bg-c", t.bg[2]);
+      root.style.setProperty("--panel", t.panel[0]); root.style.setProperty("--panel-strong", t.panel[1]); root.style.setProperty("--panel-border", t.border);
+      root.style.setProperty("--shadow", t.shadow); root.style.setProperty("--shadow2", t.shadow2); root.style.setProperty("--ring", "0 0 0 3px "+ t.ring);
+      root.style.setProperty("--menu-bg", t.menuBg || (t.scheme === "dark" ? "#0b1220" : "#ffffff"));
+      root.style.setProperty("--menu-fg", t.menuFg || t.fg);
+      root.style.setProperty("--menu-border", t.menuBorder || t.border);
+      root.setAttribute("data-scheme", t.scheme); try { root.style.colorScheme = t.scheme; } catch(e){}
+      setMetaThemeColor(t.themeColor);
+      themeModeEl.textContent = tStr("mode_" + ((mode === "auto") ? "auto" : "manual"));
+    }
+
+    function resolvedTimeZone(){ try { var opts = Intl.DateTimeFormat().resolvedOptions(); return opts && opts.timeZone ? opts.timeZone : "Local"; } catch(e){ return "Local"; } }
+    function formatUtcOffset(minutesBehindUtc){ var total = -minutesBehindUtc; var sign = total >=0?"+":"-"; var abs=Math.abs(total); var hh=String(Math.floor(abs/60)).padStart(2,"0"); var mm=String(abs%60).padStart(2,"0"); return "UTC"+sign+hh+":"+mm; }
+
+    var lastTzName = ""; var lastOffset = null; var timeFmt=null; var dateFmt=null; var use12h=false;
+
+    function rebuildFormatters(){
+      lastTzName = resolvedTimeZone(); lastOffset = new Date().getTimezoneOffset(); tzNameEl.textContent = lastTzName; utcOffsetEl.textContent = formatUtcOffset(lastOffset); tzLabel.textContent = lastTzName + " • " + formatUtcOffset(lastOffset);
+      var loc = effectiveLocale();
+      try{ timeFmt = new Intl.DateTimeFormat(loc,{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:use12h}); dateFmt = new Intl.DateTimeFormat(loc,{weekday:"long",year:"numeric",month:"long",day:"numeric"}); }catch(e){ timeFmt=null; dateFmt=null; }
+    }
+
+    function detectTzChange(){ var tz = resolvedTimeZone(); var off = new Date().getTimezoneOffset(); return (tz !== lastTzName) || (off !== lastOffset); }
+
+    function fallbackTimeParts(now){ var pad2=function(n){return String(n).padStart(2,"0")}; var h=now.getHours(),m=now.getMinutes(),s=now.getSeconds(); if(use12h){ var ampm = h>=12?"PM":"AM"; h=h%12; if(h===0) h=12; return {digits:pad2(h)+":"+pad2(m)+":"+pad2(s), ampm:ampm}; } return {digits:pad2(h)+":"+pad2(m)+":"+pad2(s), ampm:""}; }
+
+    function render(force){
+      if (force || detectTzChange()){ rebuildFormatters(); if(!force) showToast(tStr("toast_tz")); }
+      var now = new Date(); var digits="", ampm="";
+      if (timeFmt && timeFmt.formatToParts){ try{ var parts=timeFmt.formatToParts(now); for(var i=0;i<parts.length;i++){ if(parts[i].type==="dayPeriod") ampm+=parts[i].value; else digits+=parts[i].value; } digits=digits.trim(); ampm=ampm.trim(); }catch(e){ var fp=fallbackTimeParts(now); digits=fp.digits; ampm=fp.ampm; } }
+      else if (timeFmt){ var fp2=fallbackTimeParts(now); digits=fp2.digits; ampm=fp2.ampm; }
+      else { var fp3=fallbackTimeParts(now); digits=fp3.digits; ampm=fp3.ampm; }
+      timeDigitsEl.textContent = digits; timeAmPmEl.textContent = use12h ? ampm : ""; timeAmPmEl.style.display = use12h?"inline":"none"; var dStr = (dateFmt?dateFmt.format(now):now.toDateString()); dateEl.textContent = dStr;
+    }
+
+    var timerId=null; function scheduleTick(){ render(false); var now=Date.now(); var delay=1000-(now%1000); timerId=setTimeout(scheduleTick, delay); }
+
+    function updateFmtLabel(){ fmtLabel.innerHTML = "<strong>"+ (use12h ? tStr("hour12") : tStr("hour24")) + "</strong>"; fmtInput.checked=use12h; fmtToggle.dataset.on=String(use12h); fmtToggle.setAttribute("aria-checked", String(use12h)); }
+
+    function init(){
+      populateLanguages();
+      var savedTheme = storage.get("themeId","auto");
+      var savedLocale = storage.get("locale","auto");
+      langSelect.value = savedLocale; themeSelect.value = savedTheme;
+      use12h = (storage.get("fmt12h","false") === "true"); // left=false => 24‑hour; right=true => 12‑hour
+      updateFmtLabel();
+
+      applyLanguageAttrs(); setMetaLabels(); populateThemes(); themeSelect.value = savedTheme;
+      measureTopbar();
+      applyTheme(savedTheme); rebuildFormatters(); render(true); scheduleTick();
+
+      themeSelect.addEventListener("change", function(){ storage.set("themeId", themeSelect.value); applyTheme(themeSelect.value); showToast(tStr("toast_theme")); });
+      langSelect.addEventListener("change", function(){ storage.set("locale", langSelect.value || "auto"); applyLanguageAttrs(); setMetaLabels(); populateThemes(); themeSelect.value = storage.get("themeId","auto"); rebuildFormatters(); render(true); showToast(tStr("toast_theme")); });
+
+      fmtToggle.addEventListener("click", function(){ use12h=!use12h; storage.set("fmt12h", String(use12h)); updateFmtLabel(); measureTopbar(); rebuildFormatters(); render(true); showToast(tStr("toast_fmt")); });
+      fmtToggle.addEventListener("keydown", function(e){ if(e.key===" " || e.key==="Enter"){ e.preventDefault(); fmtToggle.click(); } });
+
+      copyBtn.addEventListener("click", function(){ var txt=(timeDigitsEl.textContent||"").trim() + (use12h && timeAmPmEl.textContent?" "+timeAmPmEl.textContent.trim():""); if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){ showToast(tStr("toast_copy_ok")); }).catch(function(){ showToast(tStr("toast_copy_fail")); }); return;} try{ var ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); ta.remove(); showToast(tStr("toast_copy_ok")); }catch(e){ showToast(tStr("toast_copy_fail")); } });
+
+      if (prefersDark){ var handler=function(){ if (themeSelect.value==="auto") applyTheme("auto"); }; if (prefersDark.addEventListener) prefersDark.addEventListener("change", handler); else if (prefersDark.addListener) prefersDark.addListener(handler); }
+      window.addEventListener('resize', function(){ measureTopbar(); }); document.addEventListener("visibilitychange", function(){ if(!document.hidden) render(true); }); window.addEventListener("focus", function(){ render(true); }); setInterval(function(){ render(false); }, 30000); window.addEventListener("pagehide", function(){ if (timerId) clearTimeout(timerId); });
+    }
+
+    var toastTimer=null; function showToast(msg){ toast.textContent = msg; toast.classList.add("show"); if(toastTimer) clearTimeout(toastTimer); toastTimer = setTimeout(function(){ toast.classList.remove("show"); }, 1200); }
+
+    try { init(); } catch(err){ try { showToast("Error: "+(err&&err.message?err.message:String(err))); } catch(e){} setInterval(function(){ var now=new Date(); var fp=fallbackTimeParts(now); timeDigitsEl.textContent=fp.digits; timeAmPmEl.textContent=use12h?fp.ampm:""; timeAmPmEl.style.display=use12h?"inline":"none"; dateEl.textContent=now.toDateString(); }, 1000); }
+  })();
+  </script>
+</body>
+</html>
